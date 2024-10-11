@@ -24,6 +24,10 @@
             rust-bin.stable.latest.default
             pkg-config
           ];
+
+          packages = with pkgs; [
+            git-chglog
+          ];
         };
       }
     );
