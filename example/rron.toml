@@ -1,0 +1,11 @@
+tz = "Europe/Paris"
+
+[[jobs]]
+name = "job 1"
+# ref: https://docs.oracle.com/cd/E12058_01/doc/doc.1014/e12030/cron_expressions.htm#CIHBEEFA
+# Trigger every 2 minutes
+crontab = "0 0/2 * * * * *"
+before = "zefzefzefzefzef"
+exec = "echo \"I'm being executed!\""
+after = "echo \"Bye world!\""
+logs = "./example/job_1.log"
