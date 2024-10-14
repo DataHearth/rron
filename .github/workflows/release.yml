@@ -1,0 +1,97 @@
+name: Create release w/ binaries
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build binaries
+    runs-on: ubuntu-latest
+
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+
+    strategy:
+      matrix:
+        platform:
+          - name: linux-amd64-gnu
+            target: x86_64-unknown-linux-gnu
+          - name: linux-amd64-musl
+            target: x86_64-unknown-linux-musl
+          - name: linux-aarch64-gnu
+            target: aarch64-unknown-linux-gnu
+          - name: linux-aarch64-musl
+            target: aarch64-unknown-linux-musl
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+
+      - name: Setup cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build - ${{ matrix.platform.name }}
+        run: cross build --release --target ${{ matrix.platform.target }}
+
+      - name: Upload compiled binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform.name }}
+          path: target/${{ matrix.platform.target }}/release/rron
+
+  release:
+    name: Publish new release
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Generate release body
+        id: release-body
+        run: |
+          go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest
+          git-chglog --template .chglog/RELEASE.tpl.md > release_body.txt
+
+      - name: Download generated binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: linux-*-*
+          path: binaries
+
+      - name: Rename binaries
+        run: |
+          mv binaries/linux-amd64-gnu/rron binaries/linux-amd64-gnu/rron-amd64-gnu
+          mv binaries/linux-amd64-musl/rron binaries/linux-amd64-musl/rron-amd64-musl
+          mv binaries/linux-aarch64-gnu/rron binaries/linux-aarch64-gnu/rron-aarch64-gnu
+          mv binaries/linux-aarch64-musl/rron binaries/linux-aarch64-musl/rron-aarch64-musl
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            binaries/linux-amd64-gnu/rron-amd64-gnu
+            binaries/linux-amd64-musl/rron-amd64-musl
+            binaries/linux-aarch64-gnu/rron-aarch64-gnu
+            binaries/linux-aarch64-musl/rron-aarch64-musl
+          body_path: release_body.txt
