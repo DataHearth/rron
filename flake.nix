@@ -20,12 +20,8 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            rust-bin.stable.latest.default
-            pkg-config
-          ];
-
           packages = with pkgs; [
+            rust-bin.stable.latest.default
             git-chglog
             just
             act
