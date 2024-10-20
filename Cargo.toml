@@ -1,6 +1,6 @@
 [package]
 name = "rron"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Antoine Langlois <dev@antoine-langlois.net>"]
 description = "Cron in Rust, that's rron!"
