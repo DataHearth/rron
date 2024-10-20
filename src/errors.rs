@@ -19,8 +19,10 @@ pub enum CommandError {
         out_buf: String,
         error: io::Error,
     },
-    #[error("{job_name}: process error: {error}")]
+    #[error("{job_name}: processes error: {error}")]
     CmdError { job_name: String, error: io::Error },
+    #[error("{job_name}: command failed ({cmd})")]
+    CmdFailed { job_name: String, cmd: String },
 }
 
 #[derive(Error, Debug)]

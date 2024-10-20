@@ -135,7 +135,7 @@ async fn main() {
                             }
                         }
 
-                        println!("{}: processes executed", job.name);
+                        println!("{}: every processes executed", job.name);
                     }
                 });
                 handles.push(handle);

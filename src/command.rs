@@ -13,7 +13,7 @@ pub fn trigger_cmd(
     log_file: &Option<PathBuf>,
 ) -> Result<(), CommandError> {
     let mut cmd_split = cmd.split(" ");
-    let cmd = Command::new(
+    let out = Command::new(
         cmd_split
             .next()
             .expect(&format!("{}: should not be empty", job_name)),
@@ -45,18 +45,32 @@ pub fn trigger_cmd(
         Box::new(io::stdout())
     };
 
-    buf.write_all(&cmd.stdout)
+    buf.write_all(&out.stdout)
         .map_err(|e| CommandError::LogsBufferWrite {
             job_name: job_name.into(),
             out_buf: "stdout".into(),
             error: e,
         })?;
-    buf.write_all(&cmd.stderr)
+    buf.write_all(&out.stderr)
         .map_err(|e| CommandError::LogsBufferWrite {
             job_name: job_name.into(),
             out_buf: "stderr".into(),
             error: e,
         })?;
 
+    if !out.status.success() {
+        return Err(CommandError::CmdFailed {
+            job_name: job_name.into(),
+            cmd: truncate(cmd, 15),
+        });
+    }
+
     Ok(())
+}
+
+fn truncate(s: &str, max_chars: usize) -> String {
+    match s.char_indices().nth(max_chars) {
+        None => s.to_string(),
+        Some((idx, _)) => s[..idx].to_string(),
+    }
 }
