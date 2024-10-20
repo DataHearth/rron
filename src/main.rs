@@ -4,7 +4,7 @@ mod errors;
 
 use std::{path::PathBuf, process::exit, str::FromStr};
 
-use chrono::Utc;
+use chrono::{TimeDelta, Utc};
 use chrono_tz::Tz;
 use clap::{Parser, Subcommand};
 use command::trigger_cmd;
@@ -76,8 +76,14 @@ async fn main() {
                         let now = Utc::now().with_timezone(&tz);
                         println!("{}: next trigger: {next}", job.name);
 
+                        let duration = next.with_timezone(&tz).signed_duration_since(now);
+
+                        if (next - now) < TimeDelta::zero() {
+                            continue;
+                        }
+
                         tokio::time::sleep(
-                            next.signed_duration_since(now)
+                            duration
                                 .to_std()
                                 .expect(&format!("{}: failed to get duration", job.name)),
                         )
