@@ -10,7 +10,9 @@ chrono = "0.4.38"
 chrono-tz = "0.10.0"
 clap = { version = "4.5", features = ["derive", "string"] }
 cron = "0.12.1"
+env_logger = "0.11.5"
 home = "0.5"
+log = "0.4.22"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 tokio = { version = "1.40", features = ["full"] }

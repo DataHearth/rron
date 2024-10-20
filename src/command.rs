@@ -21,7 +21,7 @@ pub fn trigger_cmd(
     .args(cmd_split)
     .output()
     .map_err(|e| CommandError::CmdError {
-        job_name: job_name.into(),
+        cmd: truncate(cmd, 15),
         error: e,
     })?;
 
@@ -47,22 +47,17 @@ pub fn trigger_cmd(
 
     buf.write_all(&out.stdout)
         .map_err(|e| CommandError::LogsBufferWrite {
-            job_name: job_name.into(),
             out_buf: "stdout".into(),
             error: e,
         })?;
     buf.write_all(&out.stderr)
         .map_err(|e| CommandError::LogsBufferWrite {
-            job_name: job_name.into(),
             out_buf: "stderr".into(),
             error: e,
         })?;
 
     if !out.status.success() {
-        return Err(CommandError::CmdFailed {
-            job_name: job_name.into(),
-            cmd: truncate(cmd, 15),
-        });
+        return Err(CommandError::CmdFailed(truncate(cmd, 15)));
     }
 
     Ok(())

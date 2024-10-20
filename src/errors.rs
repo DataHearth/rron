@@ -4,26 +4,19 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ConfigurationError {
-    #[error("Failed to read configuration file: {}", .0)]
+    #[error("failed to read configuration file: {}", .0)]
     Io(#[from] io::Error),
 
-    #[error("Failed to convert file content: {}", .0)]
+    #[error("failed to convert file content: {}", .0)]
     Parse(#[from] toml::de::Error),
 }
 
 #[derive(Error, Debug)]
 pub enum CommandError {
-    #[error("{job_name}: failed to write {out_buf}: {error}")]
-    LogsBufferWrite {
-        job_name: String,
-        out_buf: String,
-        error: io::Error,
-    },
-    #[error("{job_name}: processes error: {error}")]
-    CmdError { job_name: String, error: io::Error },
-    #[error("{job_name}: command failed ({cmd})")]
-    CmdFailed { job_name: String, cmd: String },
+    #[error("failed to write {out_buf}: {error}")]
+    LogsBufferWrite { out_buf: String, error: io::Error },
+    #[error("failed to execute command ({cmd}): {error}")]
+    CmdError { cmd: String, error: io::Error },
+    #[error("non zero status ({})", .0)]
+    CmdFailed(String),
 }
-
-#[derive(Error, Debug)]
-pub enum Error {}
