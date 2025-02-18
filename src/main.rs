@@ -83,11 +83,11 @@ async fn main() {
                 exit(1)
             }
 
-            for job in cfg.jobs {
+            for (i, job) in cfg.jobs.into_iter().enumerate() {
                 let cr = match cron::Schedule::from_str(job.crontab.as_str()) {
                     Ok(v) => v,
                     Err(e) => {
-                        error!("{}: failed to parse crontab for job 1: {e}", job.name);
+                        error!("{}: failed to parse crontab for job n°{i}: {e}", job.name);
                         exit(1)
                     }
                 };
@@ -100,7 +100,7 @@ async fn main() {
                         let now = Utc::now().with_timezone(&tz);
                         info!(
                             "{job_name}: next trigger: {}",
-                            next.format("%Y-%m-%d %H:%M:%S")
+                            next.format("%d-%m-%Y %H:%M:%S")
                         );
 
                         let duration = next.with_timezone(&tz).signed_duration_since(now);
@@ -128,7 +128,7 @@ async fn main() {
                                     continue;
                                 };
 
-                                info!("{job_name}: before command(s) executed with success");
+                                info!("{job_name}: pre-crontab command(s) executed with success");
                             }
                         }
 
@@ -143,11 +143,11 @@ async fn main() {
                                 continue;
                             };
 
-                            info!("{job_name}: before command(s) executed with success");
+                            info!("{job_name}: crontab command(s) executed with success");
                         }
 
-                        if let Some(before) = &job.before {
-                            for c in before.clone().into_iter() {
+                        if let Some(after) = &job.after {
+                            for c in after.clone().into_iter() {
                                 if c.is_empty() {
                                     error!("{job_name}: empty command");
                                     break;
@@ -158,7 +158,7 @@ async fn main() {
                                     continue;
                                 };
 
-                                info!("{job_name}: before command(s) executed with success");
+                                info!("{job_name}: post-crontab command(s) executed with success");
                             }
                         }
 
@@ -169,7 +169,7 @@ async fn main() {
             }
 
             for handle in handles {
-                handle.await.expect("Panic in task");
+                handle.await.expect("Panic in crontab thread");
             }
         }
         Commands::Print => println!("{cfg}"),
