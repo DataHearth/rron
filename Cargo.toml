@@ -4,6 +4,9 @@ version = "0.2.2"
 edition = "2021"
 authors = ["DataHearth <dev@antoine-langlois.net>"]
 description = "Rust scheduler with either crontab or human readable duration"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/DataHearth/rron"
+homepage = "https://github.com/DataHearth/rron"
 
 [dependencies]
 chrono = "0.4"
