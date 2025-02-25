@@ -1,8 +1,8 @@
 [package]
 name = "rron"
-version = "0.2.0"
+version = "0.2.2"
 edition = "2021"
-authors = ["Antoine Langlois <dev@antoine-langlois.net>"]
+authors = ["DataHearth <dev@antoine-langlois.net>"]
 description = "Rust scheduler with either crontab or human readable duration"
 
 [dependencies]

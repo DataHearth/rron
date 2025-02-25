@@ -1,11 +1,28 @@
 # CHANGELOG
 
 
+<a name="0.2.2"></a>
+## [0.2.2](https://github.com/DataHearth/rron/compare/v0.2.1...0.2.2) (2025-02-25)
+
+### Feat
+
+* **process:** add enable & duration option
+
+
+<a name="v0.2.1"></a>
+## [v0.2.1](https://github.com/DataHearth/rron/compare/v0.2.0...v0.2.1) (2025-02-18)
+
+### Fix
+
+* **pre-post cmd:** correct pre-post behavior & update logging
+
+
 <a name="v0.2.0"></a>
 ## [v0.2.0](https://github.com/DataHearth/rron/compare/v0.1.0...v0.2.0) (2024-10-20)
 
 ### Chore
 
+* **changelog:** release v0.2.0
 * **git:** add demo config to ignore
 
 ### Feat

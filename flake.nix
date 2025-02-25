@@ -30,7 +30,7 @@
 
         packages.default = pkgs.rustPlatform.buildRustPackage {
           pname = "rron";
-          version = "0.2.0";
+          version = "0.2.2";
           cargoLock.lockFile = ./Cargo.lock;
           src = pkgs.lib.cleanSource ./.;
         };
