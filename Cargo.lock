@@ -296,6 +296,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
+name = "hifitime"
+version = "4.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ed991bc189a267ffe278cd47b43873d8c21cd397ef6f2b7d23f97641e5658f0"
+dependencies = [
+ "js-sys",
+ "lexical-core",
+ "num-traits",
+ "serde",
+ "serde_derive",
+ "snafu",
+ "wasm-bindgen",
+ "web-sys",
+ "web-time",
+]
+
+[[package]]
 name = "home"
 version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -359,10 +376,57 @@ dependencies = [
 ]
 
 [[package]]
+name = "lexical-core"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b765c31809609075565a70b4b71402281283aeda7ecaf4818ac14a7b2ade8958"
+dependencies = [
+ "lexical-parse-float",
+ "lexical-parse-integer",
+ "lexical-util",
+]
+
+[[package]]
+name = "lexical-parse-float"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de6f9cb01fb0b08060209a057c048fcbab8717b4c1ecd2eac66ebfe39a65b0f2"
+dependencies = [
+ "lexical-parse-integer",
+ "lexical-util",
+ "static_assertions",
+]
+
+[[package]]
+name = "lexical-parse-integer"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72207aae22fc0a121ba7b6d479e42cbfea549af1479c3f3a4f12c70dd66df12e"
+dependencies = [
+ "lexical-util",
+ "static_assertions",
+]
+
+[[package]]
+name = "lexical-util"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a82e24bf537fd24c177ffbbdc6ebcc8d54732c35b50a3f28cc3f4e4c949a0b3"
+dependencies = [
+ "static_assertions",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.159"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "561d97a539a36e26a9a5fad1ea11a3039a67714694aaa379433e580854bc3dc5"
+
+[[package]]
+name = "libm"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8355be11b20d696c8f18f6cc018c4e372165b1fa8126cef092399c9951984ffa"
 
 [[package]]
 name = "lock_api"
@@ -430,6 +494,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
+ "libm",
 ]
 
 [[package]]
@@ -603,6 +668,7 @@ dependencies = [
  "clap",
  "cron",
  "env_logger",
+ "hifitime",
  "home",
  "log",
  "serde",
@@ -680,6 +746,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 
 [[package]]
+name = "snafu"
+version = "0.8.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "223891c85e2a29c3fe8fb900c1fae5e69c2e42415e3177752e8718475efa5019"
+dependencies = [
+ "backtrace",
+ "snafu-derive",
+]
+
+[[package]]
+name = "snafu-derive"
+version = "0.8.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03c3c6b7927ffe7ecaa769ee0e3994da3b8cafc8f444578982c83ecb161af917"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "socket2"
 version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -688,6 +776,12 @@ dependencies = [
  "libc",
  "windows-sys",
 ]
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "strsim"
@@ -861,6 +955,26 @@ name = "wasm-bindgen-shared"
 version = "0.2.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c62a0a307cb4a311d3a07867860911ca130c3494e8c2719593806c08bc5d0484"
+
+[[package]]
+name = "web-sys"
+version = "0.3.70"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26fdeaafd9bd129f65e7c031593c24d62186301e0c72c8978fa1678be7d532c0"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "web-time"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+]
 
 [[package]]
 name = "windows-core"

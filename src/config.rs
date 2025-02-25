@@ -9,6 +9,10 @@ use serde::Deserialize;
 
 use crate::errors::ConfigurationError;
 
+pub const fn default_bool<const V: bool>() -> bool {
+    V
+}
+
 #[derive(Deserialize)]
 pub struct Configuration {
     /// Timezone configuration for jobs
@@ -19,11 +23,24 @@ pub struct Configuration {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ProcessType {
+    /// Human duration. C.f https://github.com/nyx-space/hifitime?tab=readme-ov-file#duration
+    #[serde(rename = "duration")]
+    Basic(String),
+    /// Crontab expression
+    Crontab(String),
+}
+
+#[derive(Deserialize)]
 pub struct Job {
     /// Job name
     pub name: String,
-    /// crontab expression
-    pub crontab: String,
+    /// Enable or disable the job
+    #[serde(default = "default_bool::<true>")]
+    pub enable: bool,
+    #[serde(flatten)]
+    pub duration: ProcessType,
     /// Commands to execute. Could be a single command or multiple at once
     pub exec: Command,
     /// Commands to execute before the main process
@@ -62,19 +79,40 @@ impl Display for Configuration {
         let tz = if let Some(tz) = &self.tz { tz } else { "UTC" };
         writeln!(f, "Timezone: {tz}")?;
         writeln!(f, "Jobs:")?;
+        let left = "  ";
 
         for j in self.jobs.iter() {
-            writeln!(f, "\t- name: {}", j.name)?;
-            writeln!(f, "\t  crontab: {}", j.crontab)?;
+            writeln!(f, "{left}- name: {}", j.name)?;
+            writeln!(f, "{left}  enable: {}", j.enable)?;
+            writeln!(
+                f,
+                "{left}  duration: {}",
+                match &j.duration {
+                    ProcessType::Basic(b) => b,
+                    ProcessType::Crontab(c) => c,
+                }
+            )?;
             if let Some(lf) = &j.logs {
-                writeln!(f, "\t  logs file: {:?}", lf)?;
+                writeln!(f, "{left}  logs file: {:?}", lf)?;
             }
-            writeln!(f, "\t  commands: {}", j.exec.custom_display("\t\t"))?;
+            writeln!(
+                f,
+                "{left}  commands: {}",
+                j.exec.custom_display(&format!("{}{}  ", left, left))
+            )?;
             if let Some(b) = &j.before {
-                writeln!(f, "\t  before: {}", b.custom_display("\t\t"))?;
+                writeln!(
+                    f,
+                    "{left}  before: {}",
+                    b.custom_display(&format!("{}{}  ", left, left))
+                )?;
             }
             if let Some(a) = &j.after {
-                writeln!(f, "\t  after: {}", a.custom_display("\t\t"))?;
+                writeln!(
+                    f,
+                    "{left}  after: {}",
+                    a.custom_display(&format!("{}{}  ", left, left))
+                )?;
             }
             writeln!(f, "")?;
         }

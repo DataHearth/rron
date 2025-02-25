@@ -1,11 +1,11 @@
 mod command;
 mod config;
 mod errors;
+mod process;
 
-use chrono::{TimeDelta, Utc};
+use chrono::Utc;
 use chrono_tz::Tz;
 use clap::{Parser, Subcommand};
-use command::trigger_cmd;
 use config::Configuration;
 use env_logger::Builder;
 use log::{error, info};
@@ -15,8 +15,8 @@ use std::{path::PathBuf, process::exit, str::FromStr};
 #[derive(Parser, Debug)]
 struct Cli {
     /// Path to the configuration file containing jobs
-    #[arg(short, long, default_value=default_cfg_path().into_os_string())]
-    config: PathBuf,
+    #[arg(short, long)]
+    config: Option<PathBuf>,
 
     #[command(subcommand)]
     cmds: Commands,
@@ -38,10 +38,43 @@ enum Commands {
 async fn main() {
     let cli = Cli::parse();
 
-    let cfg = match Configuration::read_from_file(&cli.config) {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("Failed to read configuration file: {e}");
+    let cfg = if let Some(cfg_path) = &cli.config {
+        match Configuration::read_from_file(&cfg_path) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("Failed to read configuration file: {e}");
+                exit(1)
+            }
+        }
+    } else {
+        let mut usr_cfg = match home::home_dir() {
+            Some(v) => v,
+            None => {
+                eprintln!("Failed to get user home directory");
+                exit(1)
+            }
+        };
+        usr_cfg.push(".config/rron.toml");
+        let etc_cfg = PathBuf::from("/etc/rron.toml");
+
+        if usr_cfg.exists() {
+            match Configuration::read_from_file(&usr_cfg) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("Failed to read configuration file: {e}");
+                    exit(1)
+                }
+            }
+        } else if etc_cfg.exists() {
+            match Configuration::read_from_file(&etc_cfg) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("Failed to read configuration file: {e}");
+                    exit(1)
+                }
+            }
+        } else {
+            eprintln!("No configuration file found. Exiting...");
             exit(1)
         }
     };
@@ -73,100 +106,51 @@ async fn main() {
         )
         .init();
 
-    info!("Timezone in use: {tz}");
     match cli.cmds {
         Commands::Run => {
             let mut handles = vec![];
+
+            info!("Timezone in use: {tz}");
 
             if cfg.jobs.is_empty() {
                 error!("No jobs found for the current configuration");
                 exit(1)
             }
 
-            for (i, job) in cfg.jobs.into_iter().enumerate() {
-                let cr = match cron::Schedule::from_str(job.crontab.as_str()) {
-                    Ok(v) => v,
+            cfg.jobs.into_iter().for_each(|job| {
+                if !job.enable {
+                    info!("{}: job disabled. Skipping...", job.name);
+                    return;
+                }
+
+                let handle = match job.duration {
+                    config::ProcessType::Basic(v) => crate::process::basic(
+                        job.name.clone(),
+                        v,
+                        job.before,
+                        job.exec,
+                        job.after,
+                        job.logs,
+                    ),
+                    config::ProcessType::Crontab(v) => crate::process::crontab(
+                        job.name.clone(),
+                        v,
+                        tz,
+                        job.before,
+                        job.exec,
+                        job.after,
+                        job.logs,
+                    ),
+                };
+
+                match handle {
+                    Ok(v) => handles.push(v),
                     Err(e) => {
-                        error!("{}: failed to parse crontab for job n°{i}: {e}", job.name);
+                        error!("{}: failed to start job: {e}", job.name);
                         exit(1)
                     }
                 };
-
-                info!("{}: starting processes...", job.name);
-                let handle = tokio::spawn(async move {
-                    let job_name = &job.name;
-
-                    for next in cr.upcoming(tz) {
-                        let now = Utc::now().with_timezone(&tz);
-                        info!(
-                            "{job_name}: next trigger: {}",
-                            next.format("%d-%m-%Y %H:%M:%S")
-                        );
-
-                        let duration = next.with_timezone(&tz).signed_duration_since(now);
-
-                        if (next - now) < TimeDelta::zero() {
-                            continue;
-                        }
-
-                        tokio::time::sleep(
-                            duration
-                                .to_std()
-                                .expect(&format!("{job_name}: failed to get duration")),
-                        )
-                        .await;
-
-                        if let Some(before) = &job.before {
-                            for c in before.clone().into_iter() {
-                                if c.is_empty() {
-                                    error!("{job_name}: empty command");
-                                    break;
-                                }
-
-                                if let Err(e) = trigger_cmd(&c, job_name, &job.logs) {
-                                    error!("{job_name}: Command failed - {e}");
-                                    continue;
-                                };
-
-                                info!("{job_name}: pre-crontab command(s) executed with success");
-                            }
-                        }
-
-                        for c in job.exec.clone().into_iter() {
-                            if c.is_empty() {
-                                error!("{job_name}: empty command");
-                                break;
-                            }
-
-                            if let Err(e) = trigger_cmd(&c, job_name, &job.logs) {
-                                error!("{job_name}: Command failed - {e}");
-                                continue;
-                            };
-
-                            info!("{job_name}: crontab command(s) executed with success");
-                        }
-
-                        if let Some(after) = &job.after {
-                            for c in after.clone().into_iter() {
-                                if c.is_empty() {
-                                    error!("{job_name}: empty command");
-                                    break;
-                                }
-
-                                if let Err(e) = trigger_cmd(&c, job_name, &job.logs) {
-                                    error!("{job_name}: Command failed - {e}");
-                                    continue;
-                                };
-
-                                info!("{job_name}: post-crontab command(s) executed with success");
-                            }
-                        }
-
-                        info!("{job_name}: every process executed");
-                    }
-                });
-                handles.push(handle);
-            }
+            });
 
             for handle in handles {
                 handle.await.expect("Panic in crontab thread");
@@ -174,17 +158,4 @@ async fn main() {
         }
         Commands::Print => println!("{cfg}"),
     }
-}
-
-fn default_cfg_path() -> PathBuf {
-    let mut home = match home::home_dir() {
-        Some(v) => v,
-        None => {
-            eprintln!("Failed to get user home directory");
-            exit(1)
-        }
-    };
-    home.push(".rron.toml");
-
-    return home;
 }

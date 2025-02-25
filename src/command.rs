@@ -14,11 +14,12 @@ pub fn trigger_cmd(
 ) -> Result<(), CommandError> {
     let mut cmd_split = cmd.split(" ");
     let out = Command::new(
+        // get the main command
         cmd_split
             .next()
             .expect(&format!("{}: should not be empty", job_name)),
     )
-    .args(cmd_split)
+    .args(cmd_split) // args
     .output()
     .map_err(|e| CommandError::CmdError {
         cmd: truncate(cmd, 15),
@@ -31,6 +32,7 @@ pub fn trigger_cmd(
         } else {
             fs::File::create(lf)
         };
+
         match file {
             Ok(v) => Box::new(v),
             Err(e) => {

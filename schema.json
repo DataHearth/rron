@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/DataHearth/rron/blob/main/schema.json",
   "title": "Rron configuration",
   "description": "Configuration schema for the TOML configuration file",
@@ -21,10 +20,21 @@
             "description": "The name of the job.",
             "example": "job 1"
           },
+          "enable": {
+            "type": "boolean",
+            "description": "Enable or disable the job.",
+            "example": false,
+            "default": true
+          },
           "crontab": {
             "type": "string",
             "description": "Cron expression for the job schedule.",
             "example": "0 0/2 * * * * *"
+          },
+          "duration": {
+            "type": "string",
+            "description": "Duration of the job execution.",
+            "example": "1h 30m"
           },
           "before": {
             "type": "string",
@@ -47,7 +57,8 @@
             "example": "./example/job_1.log"
           }
         },
-        "required": ["name", "crontab", "exec"]
+        "required": ["name", "exec"],
+        "anyOf": [{ "required": ["crontab"] }, { "required": ["duration"] }]
       },
       "minItems": 1,
       "uniqueItems": true
