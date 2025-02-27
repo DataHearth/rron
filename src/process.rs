@@ -5,7 +5,11 @@ use hifitime::Duration;
 use log::{error, info};
 use tokio::task::JoinHandle;
 
-use crate::{command::trigger_cmd, config::Command, errors::ProcessError};
+use crate::{
+    command::trigger_cmd,
+    config::Command,
+    errors::{CommandError, ProcessError},
+};
 
 pub fn crontab(
     name: String,
@@ -16,46 +20,8 @@ pub fn crontab(
     after: Option<Command>,
     log_file: Option<PathBuf>,
 ) -> Result<JoinHandle<()>, ProcessError> {
+    let (before, exec, after) = get_commands(before, exec, after)?;
     let cr = cron::Schedule::from_str(&crontab).map_err(|e| ProcessError::CrontabParse(e))?;
-    let before = if let Some(b) = before {
-        let mut out = vec![];
-        for (i, v) in b.into_iter().enumerate() {
-            if v.is_empty() {
-                return Err(ProcessError::EmptyCommand(String::from("before"), i));
-            }
-
-            out.push(v);
-        }
-
-        out
-    } else {
-        vec![]
-    };
-    let exec = {
-        let mut out = vec![];
-        for (i, x) in exec.into_iter().enumerate() {
-            if x.is_empty() {
-                return Err(ProcessError::EmptyCommand(String::from("exec"), i));
-            }
-            out.push(x);
-        }
-
-        out
-    };
-    let after = if let Some(a) = after {
-        let mut out = vec![];
-        for (i, v) in a.into_iter().enumerate() {
-            if v.is_empty() {
-                return Err(ProcessError::EmptyCommand(String::from("after"), i));
-            }
-
-            out.push(v);
-        }
-
-        out
-    } else {
-        vec![]
-    };
 
     info!("{}: starting processes...", name);
 
@@ -77,34 +43,25 @@ pub fn crontab(
             )
             .await;
 
-            before.iter().for_each(|c| {
-                if let Err(e) = trigger_cmd(c, &name, &log_file) {
-                    error!("{name}: Command failed - {e}");
-                    return;
-                };
+            info!("{name}: executing pre-commands...");
+            if let Err(e) = execute(&before, &name, &log_file) {
+                error!("{name}: Command failed - {e}");
+                continue;
+            };
 
-                info!("{name}: pre-command(s) executed with success");
-            });
+            info!("{name}: executing commands...");
+            if let Err(e) = execute(&exec, &name, &log_file) {
+                error!("{name}: Command failed - {e}");
+                continue;
+            };
 
-            exec.iter().for_each(|c| {
-                if let Err(e) = trigger_cmd(c, &name, &log_file) {
-                    error!("{name}: Command failed - {e}");
-                    return;
-                };
+            info!("{name}: executing post-commands...");
+            if let Err(e) = execute(&after, &name, &log_file) {
+                error!("{name}: Command failed - {e}");
+                continue;
+            }
 
-                info!("{name}: command(s) executed with success");
-            });
-
-            after.iter().for_each(|c| {
-                if let Err(e) = trigger_cmd(c, &name, &log_file) {
-                    error!("{name}: Command failed - {e}");
-                    return;
-                };
-
-                info!("{name}: post-command(s) executed with success");
-            });
-
-            info!("{name}: every process executed");
+            info!("{name}: every processes executed");
         }
     });
 
@@ -119,13 +76,51 @@ pub fn basic(
     after: Option<Command>,
     log_file: Option<PathBuf>,
 ) -> Result<JoinHandle<()>, ProcessError> {
+    let (before, exec, after) = get_commands(before, exec, after)?;
     let duration = Duration::from_str(&duration).map_err(|e| ProcessError::DurationParse(e))?;
     if duration.is_negative() {
         return Err(ProcessError::NegativeDuration);
     }
-
     let secs = duration.to_seconds();
 
+    info!("{}: starting processes...", name);
+
+    let handle = tokio::spawn(async move {
+        loop {
+            info!("{name}: next trigger in: {}", duration);
+
+            tokio::time::sleep(time::Duration::from_secs_f64(secs)).await;
+
+            info!("{name}: executing pre-commands...");
+            if let Err(e) = execute(&before, &name, &log_file) {
+                error!("{name}: Command failed - {e}");
+                continue;
+            };
+
+            info!("{name}: executing commands...");
+            if let Err(e) = execute(&exec, &name, &log_file) {
+                error!("{name}: Command failed - {e}");
+                continue;
+            };
+
+            info!("{name}: executing post-commands...");
+            if let Err(e) = execute(&after, &name, &log_file) {
+                error!("{name}: Command failed - {e}");
+                continue;
+            }
+
+            info!("{name}: every processes executed");
+        }
+    });
+
+    Ok(handle)
+}
+
+fn get_commands(
+    before: Option<Command>,
+    exec: Command,
+    after: Option<Command>,
+) -> Result<(Vec<String>, Vec<String>, Vec<String>), ProcessError> {
     let before = if let Some(b) = before {
         let mut out = vec![];
         for (i, v) in b.into_iter().enumerate() {
@@ -166,44 +161,17 @@ pub fn basic(
         vec![]
     };
 
-    info!("{}: starting processes...", name);
+    Ok((before, exec, after))
+}
 
-    let handle = tokio::spawn(async move {
-        loop {
-            info!("{name}: next trigger in: {}", duration);
+fn execute(
+    cmds: &[String],
+    job_name: &str,
+    log_file: &Option<PathBuf>,
+) -> Result<(), CommandError> {
+    for cmd in cmds {
+        trigger_cmd(cmd, job_name, log_file)?
+    }
 
-            tokio::time::sleep(time::Duration::from_secs_f64(secs)).await;
-
-            before.iter().for_each(|c| {
-                if let Err(e) = trigger_cmd(c, &name, &log_file) {
-                    error!("{name}: Command failed - {e}");
-                    return;
-                };
-
-                info!("{name}: pre-command(s) executed with success");
-            });
-
-            exec.iter().for_each(|c| {
-                if let Err(e) = trigger_cmd(c, &name, &log_file) {
-                    error!("{name}: Command failed - {e}");
-                    return;
-                };
-
-                info!("{name}: command(s) executed with success");
-            });
-
-            after.iter().for_each(|c| {
-                if let Err(e) = trigger_cmd(c, &name, &log_file) {
-                    error!("{name}: Command failed - {e}");
-                    return;
-                };
-
-                info!("{name}: post-command(s) executed with success");
-            });
-
-            info!("{name}: every process executed");
-        }
-    });
-
-    Ok(handle)
+    Ok(())
 }
