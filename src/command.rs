@@ -13,7 +13,7 @@ pub fn trigger_cmd(
     log_file: &Option<PathBuf>,
 ) -> Result<(), CommandError> {
     let mut cmd_split = cmd.split(" ");
-    let out = Command::new(
+    let mut out = Command::new(
         // get the main command
         cmd_split
             .next()
@@ -47,12 +47,21 @@ pub fn trigger_cmd(
         Box::new(io::stdout())
     };
 
-    buf.write_all(&out.stdout)
+    let timestamp = chrono::Local::now()
+        .format("%d-%m-%Y %H:%M:%S: ")
+        .to_string();
+    let mut stdout = timestamp.clone().into_bytes();
+    let mut stderr = timestamp.into_bytes();
+
+    stdout.append(&mut out.stdout);
+    stderr.append(&mut out.stderr);
+
+    buf.write_all(&stdout)
         .map_err(|e| CommandError::LogsBufferWrite {
             out_buf: "stdout".into(),
             error: e,
         })?;
-    buf.write_all(&out.stderr)
+    buf.write_all(&stderr)
         .map_err(|e| CommandError::LogsBufferWrite {
             out_buf: "stderr".into(),
             error: e,
