@@ -1,8 +1,26 @@
 # CHANGELOG
 
 
-<a name="0.2.2"></a>
-## [0.2.2](https://github.com/DataHearth/rron/compare/v0.2.1...0.2.2) (2025-02-25)
+<a name="v0.3.0"></a>
+## [v0.3.0](https://github.com/DataHearth/rron/compare/v0.2.2...v0.3.0) (2025-03-09)
+
+### Chore
+
+* **license:** add GPL-3.0-or-later
+* **refactor:** process
+
+### Feat
+
+* **log:** format STDOUT/STDERR output with comments and separator
+* **log:** add timestamp to process logs
+
+
+<a name="v0.2.2"></a>
+## [v0.2.2](https://github.com/DataHearth/rron/compare/v0.2.1...v0.2.2) (2025-02-25)
+
+### Chore
+
+* **changelog:** release v0.2.2
 
 ### Feat
 
