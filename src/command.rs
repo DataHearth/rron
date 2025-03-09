@@ -50,11 +50,19 @@ pub fn trigger_cmd(
     let timestamp = chrono::Local::now()
         .format("%d-%m-%Y %H:%M:%S: ")
         .to_string();
-    let mut stdout = timestamp.clone().into_bytes();
-    let mut stderr = timestamp.into_bytes();
+    let mut stdout = format!("# STDOUT\n{timestamp}").into_bytes();
+    let mut stderr = format!("\n# STDERR\n{timestamp}").into_bytes();
 
     stdout.append(&mut out.stdout);
     stderr.append(&mut out.stderr);
+    stderr.push(b'\n');
+
+    writeln!(stderr, "----------------------------------").map_err(|e| {
+        CommandError::LogsBufferWrite {
+            out_buf: "stderr".into(),
+            error: e,
+        }
+    })?;
 
     buf.write_all(&stdout)
         .map_err(|e| CommandError::LogsBufferWrite {
